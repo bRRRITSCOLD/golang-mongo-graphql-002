@@ -91,7 +91,9 @@ func main() {
 	if findIssuesErr != nil {
 		panic(findIssuesErr)
 	}
+
 	query := bson.D{bson.E{"code", bson.D{{"$in", bson.A{createdIssue.Code, createdIssues[0].Code, createdIssues[1].Code}}}}}
+
 	foundIssues, findIssuesErr = issue.FindIssues(query)
 	if findIssuesErr != nil {
 		panic(findIssuesErr)
@@ -99,10 +101,21 @@ func main() {
 
 	fmt.Printf("%+v\n", foundIssues)
 
-	deleteFilter := issue.Issue{
-		Description: createdIssue.Description,
+	updateIssuesResponse, updateIssuesErr := issue.UpdateIssues(query, issue.Issue{Completed: true})
+	if updateIssuesErr != nil {
+		panic(updateIssuesErr)
 	}
-	deletedIssues, deleteIssuesErr := issue.DeleteIssues(deleteFilter)
+
+	fmt.Printf("%+v\n", updateIssuesResponse)
+
+	foundIssues, findIssuesErr = issue.FindIssues(query)
+	if findIssuesErr != nil {
+		panic(findIssuesErr)
+	}
+
+	fmt.Printf("%+v\n", foundIssues)
+
+	deletedIssues, deleteIssuesErr := issue.DeleteIssues(query)
 	if deleteIssuesErr != nil {
 		panic(deleteIssuesErr)
 	}

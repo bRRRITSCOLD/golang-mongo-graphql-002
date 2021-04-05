@@ -5,6 +5,7 @@ import (
 
 	"golang-mongo-graphql-002/internal/mongodb"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -119,4 +120,22 @@ func DeleteIssues(filter interface{}) (int64, error) {
 		return 0, err
 	}
 	return deletedIssues.DeletedCount, nil
+}
+
+func UpdateIssues(filter interface{}, issue Issue) (int64, error) {
+	//Get MongoDB connection using connectionhelper.
+	client, err := mongodb.GetMongoClient()
+	if err != nil {
+		return 0, err
+	}
+	//Create a handle to the respective collection in the database.
+	collection := client.Database(mongodb.DB).Collection(mongodb.ISSUES)
+	//Perform DeleteMany operation & validate against the error.
+	updateManyResponse, err := collection.UpdateMany(context.TODO(), filter, bson.D{
+		bson.E{"$set", issue},
+	})
+	if err != nil {
+		return 0, err
+	}
+	return updateManyResponse.ModifiedCount, nil
 }
