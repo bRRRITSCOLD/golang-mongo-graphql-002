@@ -16,13 +16,17 @@ type Query {
   issues: [Issue!]!
 }
 
-# input NewTodo {
-#   text: String!
-#   userId: String!
-# }
+input NewIssue {
+  createdAt: Time
+  updatedAt: Time
+  title: String!
+  code: String!
+  description: String!
+  completed: Boolean!
+}
 
-# type Mutation {
-#   createTodo(input: NewTodo!): Todo!
-# }
+type Mutation {
+  createIssue(input: NewIssue!): Issue!
+}
 
 scalar Time

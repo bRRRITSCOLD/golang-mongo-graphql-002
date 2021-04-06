@@ -36,6 +36,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Mutation() MutationResolver
 	Query() QueryResolver
 }
 
@@ -53,11 +54,18 @@ type ComplexityRoot struct {
 		UpdatedAt   func(childComplexity int) int
 	}
 
+	Mutation struct {
+		CreateIssue func(childComplexity int, input issue.NewIssue) int
+	}
+
 	Query struct {
 		Issues func(childComplexity int) int
 	}
 }
 
+type MutationResolver interface {
+	CreateIssue(ctx context.Context, input issue.NewIssue) (*issue.Issue, error)
+}
 type QueryResolver interface {
 	Issues(ctx context.Context) ([]*issue.Issue, error)
 }
@@ -126,6 +134,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Issue.UpdatedAt(childComplexity), true
 
+	case "Mutation.createIssue":
+		if e.complexity.Mutation.CreateIssue == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createIssue_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateIssue(childComplexity, args["input"].(issue.NewIssue)), true
+
 	case "Query.issues":
 		if e.complexity.Query.Issues == nil {
 			break
@@ -150,6 +170,20 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 			first = false
 			data := ec._Query(ctx, rc.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
+		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
 			var buf bytes.Buffer
 			data.MarshalGQL(&buf)
 
@@ -201,14 +235,18 @@ type Query {
   issues: [Issue!]!
 }
 
-# input NewTodo {
-#   text: String!
-#   userId: String!
-# }
+input NewIssue {
+  createdAt: Time
+  updatedAt: Time
+  title: String!
+  code: String!
+  description: String!
+  completed: Boolean!
+}
 
-# type Mutation {
-#   createTodo(input: NewTodo!): Todo!
-# }
+type Mutation {
+  createIssue(input: NewIssue!): Issue!
+}
 
 scalar Time`, BuiltIn: false},
 }
@@ -217,6 +255,21 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Mutation_createIssue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 issue.NewIssue
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNNewIssue2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐNewIssue(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -508,6 +561,48 @@ func (ec *executionContext) _Issue_completed(ctx context.Context, field graphql.
 	res := resTmp.(bool)
 	fc.Result = res
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_createIssue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_createIssue_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateIssue(rctx, args["input"].(issue.NewIssue))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*issue.Issue)
+	fc.Result = res
+	return ec.marshalNIssue2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐIssue(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_issues(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1703,6 +1798,66 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputNewIssue(ctx context.Context, obj interface{}) (issue.NewIssue, error) {
+	var it issue.NewIssue
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "createdAt":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAt"))
+			it.CreatedAt, err = ec.unmarshalOTime2timeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "updatedAt":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAt"))
+			it.UpdatedAt, err = ec.unmarshalOTime2timeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "title":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
+			it.Title, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "code":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("code"))
+			it.Code, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "description":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			it.Description, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "completed":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("completed"))
+			it.Completed, err = ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -1748,6 +1903,37 @@ func (ec *executionContext) _Issue(ctx context.Context, sel ast.SelectionSet, ob
 			}
 		case "completed":
 			out.Values[i] = ec._Issue_completed(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var mutationImplementors = []string{"Mutation"}
+
+func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mutationImplementors)
+
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Mutation",
+	})
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Mutation")
+		case "createIssue":
+			out.Values[i] = ec._Mutation_createIssue(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -2081,6 +2267,10 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 	return res
 }
 
+func (ec *executionContext) marshalNIssue2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐIssue(ctx context.Context, sel ast.SelectionSet, v issue.Issue) graphql.Marshaler {
+	return ec._Issue(ctx, sel, &v)
+}
+
 func (ec *executionContext) marshalNIssue2ᚕᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐIssueᚄ(ctx context.Context, sel ast.SelectionSet, v []*issue.Issue) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -2126,6 +2316,11 @@ func (ec *executionContext) marshalNIssue2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋin
 		return graphql.Null
 	}
 	return ec._Issue(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNNewIssue2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐNewIssue(ctx context.Context, v interface{}) (issue.NewIssue, error) {
+	res, err := ec.unmarshalInputNewIssue(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {

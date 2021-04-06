@@ -1,14 +1,16 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 	"golang-mongo-graphql-002/internal/api"
 	"golang-mongo-graphql-002/internal/api/generated"
-	"golang-mongo-graphql-002/internal/issue"
+
+	// "golang-mongo-graphql-002/internal/issue"
 	"log"
 	"net/http"
 	"os"
-	"time"
+
+	// "time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -17,30 +19,30 @@ import (
 const defaultPort = "8080"
 
 func main() {
-	newIssues := []issue.Issue{
-		{
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-			Code:        "TEST_CODE2",
-			Title:       "Test title Two.",
-			Description: "This is a test description.",
-			Completed:   false,
-		},
-		{
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-			Code:        "TEST_CODE3",
-			Title:       "Test title Three.",
-			Description: "This is a test description.",
-			Completed:   false,
-		},
-	}
-	createdIssues, createIssuesErr := issue.CreateIssues(newIssues)
-	if createIssuesErr != nil {
-		panic(createIssuesErr)
-	}
+	// newIssues := []issue.Issue{
+	// 	{
+	// 		CreatedAt:   time.Now(),
+	// 		UpdatedAt:   time.Now(),
+	// 		Code:        "TEST_CODE2",
+	// 		Title:       "Test title Two.",
+	// 		Description: "This is a test description.",
+	// 		Completed:   false,
+	// 	},
+	// 	{
+	// 		CreatedAt:   time.Now(),
+	// 		UpdatedAt:   time.Now(),
+	// 		Code:        "TEST_CODE3",
+	// 		Title:       "Test title Three.",
+	// 		Description: "This is a test description.",
+	// 		Completed:   false,
+	// 	},
+	// }
+	// createdIssues, createIssuesErr := issue.CreateIssues(newIssues)
+	// if createIssuesErr != nil {
+	// 	panic(createIssuesErr)
+	// }
 
-	fmt.Printf("%+v\n", createdIssues)
+	// fmt.Printf("%+v\n", createdIssues)
 
 	port := os.Getenv("PORT")
 	if port == "" {
