@@ -7,6 +7,7 @@ import (
 //Issue - struct to map with mongodb documents
 type Issue struct {
 	ID          string    `json:"_id" bson:"_id,omitempty"`
+	IssueID     string    `json:"issueId" bson:"issueId,omitempty"`
 	CreatedAt   time.Time `json:"createdAt" bson:"createdAt,omitempty"`
 	UpdatedAt   time.Time `json:"updatedAt" bson:"updatedAt,omitempty"`
 	Title       string    `json:"title" bson:"title,omitempty"`

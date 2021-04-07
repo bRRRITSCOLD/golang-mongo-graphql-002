@@ -50,24 +50,29 @@ type ComplexityRoot struct {
 		CreatedAt   func(childComplexity int) int
 		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
+		IssueID     func(childComplexity int) int
 		Title       func(childComplexity int) int
 		UpdatedAt   func(childComplexity int) int
 	}
 
 	Mutation struct {
 		CreateIssue func(childComplexity int, input issue.NewIssue) int
+		DeleteIssue func(childComplexity int, issueID string) int
 	}
 
 	Query struct {
+		Issue  func(childComplexity int, issueID string) int
 		Issues func(childComplexity int) int
 	}
 }
 
 type MutationResolver interface {
 	CreateIssue(ctx context.Context, input issue.NewIssue) (*issue.Issue, error)
+	DeleteIssue(ctx context.Context, issueID string) (bool, error)
 }
 type QueryResolver interface {
 	Issues(ctx context.Context) ([]*issue.Issue, error)
+	Issue(ctx context.Context, issueID string) (*issue.Issue, error)
 }
 
 type executableSchema struct {
@@ -120,6 +125,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Issue.ID(childComplexity), true
 
+	case "Issue.issueId":
+		if e.complexity.Issue.IssueID == nil {
+			break
+		}
+
+		return e.complexity.Issue.IssueID(childComplexity), true
+
 	case "Issue.title":
 		if e.complexity.Issue.Title == nil {
 			break
@@ -145,6 +157,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateIssue(childComplexity, args["input"].(issue.NewIssue)), true
+
+	case "Mutation.deleteIssue":
+		if e.complexity.Mutation.DeleteIssue == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteIssue_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteIssue(childComplexity, args["issueId"].(string)), true
+
+	case "Query.issue":
+		if e.complexity.Query.Issue == nil {
+			break
+		}
+
+		args, err := ec.field_Query_issue_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Issue(childComplexity, args["issueId"].(string)), true
 
 	case "Query.issues":
 		if e.complexity.Query.Issues == nil {
@@ -223,6 +259,7 @@ var sources = []*ast.Source{
 
 type Issue {
   _id: ID!
+  issueId: String!
   createdAt: Time
   updatedAt: Time
   title: String!
@@ -233,6 +270,7 @@ type Issue {
 
 type Query {
   issues: [Issue!]!
+  issue(issueId: String!): Issue!
 }
 
 input NewIssue {
@@ -246,6 +284,7 @@ input NewIssue {
 
 type Mutation {
   createIssue(input: NewIssue!): Issue!
+  deleteIssue(issueId: String!): Boolean!
 }
 
 scalar Time`, BuiltIn: false},
@@ -271,6 +310,21 @@ func (ec *executionContext) field_Mutation_createIssue_args(ctx context.Context,
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_deleteIssue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["issueId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issueId"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["issueId"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -283,6 +337,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_issue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["issueId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issueId"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["issueId"] = arg0
 	return args, nil
 }
 
@@ -357,6 +426,41 @@ func (ec *executionContext) _Issue__id(ctx context.Context, field graphql.Collec
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Issue_issueId(ctx context.Context, field graphql.CollectedField, obj *issue.Issue) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Issue",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IssueID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Issue_createdAt(ctx context.Context, field graphql.CollectedField, obj *issue.Issue) (ret graphql.Marshaler) {
@@ -605,6 +709,48 @@ func (ec *executionContext) _Mutation_createIssue(ctx context.Context, field gra
 	return ec.marshalNIssue2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐIssue(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_deleteIssue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteIssue_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteIssue(rctx, args["issueId"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_issues(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -638,6 +784,48 @@ func (ec *executionContext) _Query_issues(ctx context.Context, field graphql.Col
 	res := resTmp.([]*issue.Issue)
 	fc.Result = res
 	return ec.marshalNIssue2ᚕᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐIssueᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_issue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_issue_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Issue(rctx, args["issueId"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*issue.Issue)
+	fc.Result = res
+	return ec.marshalNIssue2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐIssue(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1882,6 +2070,11 @@ func (ec *executionContext) _Issue(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "issueId":
+			out.Values[i] = ec._Issue_issueId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createdAt":
 			out.Values[i] = ec._Issue_createdAt(ctx, field, obj)
 		case "updatedAt":
@@ -1937,6 +2130,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "deleteIssue":
+			out.Values[i] = ec._Mutation_deleteIssue(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -1972,6 +2170,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_issues(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "issue":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_issue(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}

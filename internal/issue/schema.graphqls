@@ -4,6 +4,7 @@
 
 type Issue {
   _id: ID!
+  issueId: String!
   createdAt: Time
   updatedAt: Time
   title: String!
@@ -14,6 +15,7 @@ type Issue {
 
 type Query {
   issues: [Issue!]!
+  issue(issueId: String!): Issue!
 }
 
 input NewIssue {
@@ -27,6 +29,7 @@ input NewIssue {
 
 type Mutation {
   createIssue(input: NewIssue!): Issue!
+  deleteIssue(issueId: String!): Boolean!
 }
 
 scalar Time
