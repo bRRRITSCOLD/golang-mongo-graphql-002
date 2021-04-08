@@ -62,6 +62,7 @@ func CreateIssues(issues []Issue) ([]Issue, error) {
 		newIssueID := insertManyResponse.InsertedIDs[i]
 		newIssues = append(newIssues, Issue{
 			ID:          newIssueID.(primitive.ObjectID).Hex(),
+			IssueID:     newIssue.IssueID,
 			CreatedAt:   newIssue.CreatedAt,
 			UpdatedAt:   newIssue.UpdatedAt,
 			Title:       newIssue.Title,

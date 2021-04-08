@@ -10,12 +10,14 @@ import (
 	"golang-mongo-graphql-002/internal/issue"
 	"time"
 
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (r *mutationResolver) CreateIssue(ctx context.Context, input issue.NewIssue) (*issue.Issue, error) {
 	createdIssues, createIssuesErr := issue.CreateIssues([]issue.Issue{
 		{
+			IssueID:     uuid.New().String(),
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 			Title:       input.Title,
@@ -43,7 +45,13 @@ func (r *queryResolver) Issues(ctx context.Context) ([]*issue.Issue, error) {
 }
 
 func (r *queryResolver) Issue(ctx context.Context, issueID string) (*issue.Issue, error) {
-	panic(fmt.Errorf("not implemented"))
+	foundIssues, findIssuesErr := issue.FindIssues(issue.Issue{
+		IssueID: issueID,
+	})
+	if findIssuesErr != nil {
+		return nil, findIssuesErr
+	}
+	return issue.PointerIssue(foundIssues[0]), nil
 }
 
 // Mutation returns generated.MutationResolver implementation.
@@ -54,20 +62,3 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *issueResolver) IssueID(ctx context.Context, obj *issue.Issue) (string, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-func (r *Resolver) Issue() generated.IssueResolver { return &issueResolver{r} }
-
-type issueResolver struct{ *Resolver }
-
-func (r *queryResolver) DeleteIssue(ctx context.Context, issueID string) (*issue.Issue, error) {
-	panic(fmt.Errorf("not implemented"))
-}
