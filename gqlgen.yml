@@ -1,6 +1,8 @@
 # Where are all the schema files located? globs are supported eg  src/**/*.graphqls
 schema:
+  - internal/api/schema.graphqls
   - internal/issue/*.graphqls
+  - internal/comment/*.graphqls
 
 # Where should the generated server code go?
 exec:
@@ -22,6 +24,7 @@ resolver:
   layout: follow-schema
   dir: internal/api
   package: api
+  filename_template: "{name}.resolvers.go"
 
 # Optional: turn on use `gqlgen:"fieldName"` tags in your models
 # struct_tag: json
@@ -36,6 +39,7 @@ resolver:
 # if they match it will use them, otherwise it will generate them.
 autobind:
   - "golang-mongo-graphql-002/internal/issue"
+  - "golang-mongo-graphql-002/internal/comment"
 
 # This section declares type mapping between the GraphQL and go type systems
 #

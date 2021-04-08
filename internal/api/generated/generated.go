@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"golang-mongo-graphql-002/internal/comment"
 	"golang-mongo-graphql-002/internal/issue"
 	"strconv"
 	"sync"
@@ -44,6 +45,19 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	APIHealth struct {
+		Status func(childComplexity int) int
+	}
+
+	Comment struct {
+		Body      func(childComplexity int) int
+		CommentID func(childComplexity int) int
+		CreatedAt func(childComplexity int) int
+		ID        func(childComplexity int) int
+		IssueID   func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
+	}
+
 	Issue struct {
 		Code        func(childComplexity int) int
 		Completed   func(childComplexity int) int
@@ -56,23 +70,31 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateIssue func(childComplexity int, input issue.NewIssue) int
+		CreateIssue func(childComplexity int, input NewIssueInput) int
 		DeleteIssue func(childComplexity int, issueID string) int
+		HealthCheck func(childComplexity int) int
+		UpdateIssue func(childComplexity int, issueID string, issue *UpdateIssueInput) int
 	}
 
 	Query struct {
-		Issue  func(childComplexity int, issueID string) int
-		Issues func(childComplexity int) int
+		Comments    func(childComplexity int) int
+		HealthCheck func(childComplexity int) int
+		Issue       func(childComplexity int, issueID string) int
+		Issues      func(childComplexity int) int
 	}
 }
 
 type MutationResolver interface {
-	CreateIssue(ctx context.Context, input issue.NewIssue) (*issue.Issue, error)
+	HealthCheck(ctx context.Context) (*APIHealth, error)
+	CreateIssue(ctx context.Context, input NewIssueInput) (*issue.Issue, error)
 	DeleteIssue(ctx context.Context, issueID string) (bool, error)
+	UpdateIssue(ctx context.Context, issueID string, issue *UpdateIssueInput) (bool, error)
 }
 type QueryResolver interface {
+	HealthCheck(ctx context.Context) (*APIHealth, error)
 	Issues(ctx context.Context) ([]*issue.Issue, error)
 	Issue(ctx context.Context, issueID string) (*issue.Issue, error)
+	Comments(ctx context.Context) ([]*comment.Comment, error)
 }
 
 type executableSchema struct {
@@ -89,6 +111,55 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "APIHealth.Status":
+		if e.complexity.APIHealth.Status == nil {
+			break
+		}
+
+		return e.complexity.APIHealth.Status(childComplexity), true
+
+	case "Comment.body":
+		if e.complexity.Comment.Body == nil {
+			break
+		}
+
+		return e.complexity.Comment.Body(childComplexity), true
+
+	case "Comment.commentId":
+		if e.complexity.Comment.CommentID == nil {
+			break
+		}
+
+		return e.complexity.Comment.CommentID(childComplexity), true
+
+	case "Comment.createdAt":
+		if e.complexity.Comment.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Comment.CreatedAt(childComplexity), true
+
+	case "Comment._id":
+		if e.complexity.Comment.ID == nil {
+			break
+		}
+
+		return e.complexity.Comment.ID(childComplexity), true
+
+	case "Comment.issueId":
+		if e.complexity.Comment.IssueID == nil {
+			break
+		}
+
+		return e.complexity.Comment.IssueID(childComplexity), true
+
+	case "Comment.updatedAt":
+		if e.complexity.Comment.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Comment.UpdatedAt(childComplexity), true
 
 	case "Issue.code":
 		if e.complexity.Issue.Code == nil {
@@ -156,7 +227,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateIssue(childComplexity, args["input"].(issue.NewIssue)), true
+		return e.complexity.Mutation.CreateIssue(childComplexity, args["input"].(NewIssueInput)), true
 
 	case "Mutation.deleteIssue":
 		if e.complexity.Mutation.DeleteIssue == nil {
@@ -169,6 +240,39 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.DeleteIssue(childComplexity, args["issueId"].(string)), true
+
+	case "Mutation.healthCheck":
+		if e.complexity.Mutation.HealthCheck == nil {
+			break
+		}
+
+		return e.complexity.Mutation.HealthCheck(childComplexity), true
+
+	case "Mutation.updateIssue":
+		if e.complexity.Mutation.UpdateIssue == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateIssue_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateIssue(childComplexity, args["issueId"].(string), args["issue"].(*UpdateIssueInput)), true
+
+	case "Query.comments":
+		if e.complexity.Query.Comments == nil {
+			break
+		}
+
+		return e.complexity.Query.Comments(childComplexity), true
+
+	case "Query.healthCheck":
+		if e.complexity.Query.HealthCheck == nil {
+			break
+		}
+
+		return e.complexity.Query.HealthCheck(childComplexity), true
 
 	case "Query.issue":
 		if e.complexity.Query.Issue == nil {
@@ -253,7 +357,23 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "internal/issue/schema.graphqls", Input: `# GraphQL schema example
+	{Name: "internal/api/schema.graphqls", Input: `schema {
+  query: Query
+  mutation: Mutation
+}
+
+type APIHealth {
+  Status: String!
+}
+
+type Query {
+  healthCheck: APIHealth!
+}
+
+type Mutation {
+  healthCheck: APIHealth!
+}`, BuiltIn: false},
+	{Name: "internal/issue/issue.graphqls", Input: `# GraphQL schema example
 #
 # https://gqlgen.com/getting-started/
 
@@ -268,12 +388,12 @@ type Issue {
   completed: Boolean!
 }
 
-type Query {
+extend type Query {
   issues: [Issue!]!
   issue(issueId: String!): Issue!
 }
 
-input NewIssue {
+input NewIssueInput {
   createdAt: Time
   updatedAt: Time
   title: String!
@@ -282,12 +402,35 @@ input NewIssue {
   completed: Boolean!
 }
 
-type Mutation {
-  createIssue(input: NewIssue!): Issue!
+input UpdateIssueInput {
+  createdAt: Time
+  updatedAt: Time
+  title: String
+  code: String
+  description: String
+  completed: Boolean
+}
+
+extend type Mutation {
+  createIssue(input: NewIssueInput!): Issue!
   deleteIssue(issueId: String!): Boolean!
+  updateIssue(issueId: String!, issue: UpdateIssueInput): Boolean!
 }
 
 scalar Time`, BuiltIn: false},
+	{Name: "internal/comment/comment.graphqls", Input: `type Comment {
+  _id: ID!
+  commentId: String!
+  issueId: String!
+  createdAt: Time
+  updatedAt: Time
+  body: String!
+}
+
+extend type Query {
+  comments: [Comment!]!
+}
+`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
@@ -298,10 +441,10 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_createIssue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 issue.NewIssue
+	var arg0 NewIssueInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewIssue2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐNewIssue(ctx, tmp)
+		arg0, err = ec.unmarshalNNewIssueInput2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐNewIssueInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -322,6 +465,30 @@ func (ec *executionContext) field_Mutation_deleteIssue_args(ctx context.Context,
 		}
 	}
 	args["issueId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateIssue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["issueId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issueId"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["issueId"] = arg0
+	var arg1 *UpdateIssueInput
+	if tmp, ok := rawArgs["issue"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issue"))
+		arg1, err = ec.unmarshalOUpdateIssueInput2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐUpdateIssueInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["issue"] = arg1
 	return args, nil
 }
 
@@ -392,6 +559,245 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _APIHealth_Status(ctx context.Context, field graphql.CollectedField, obj *APIHealth) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "APIHealth",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Comment__id(ctx context.Context, field graphql.CollectedField, obj *comment.Comment) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Comment",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Comment_commentId(ctx context.Context, field graphql.CollectedField, obj *comment.Comment) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Comment",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CommentID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Comment_issueId(ctx context.Context, field graphql.CollectedField, obj *comment.Comment) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Comment",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IssueID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Comment_createdAt(ctx context.Context, field graphql.CollectedField, obj *comment.Comment) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Comment",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Comment_updatedAt(ctx context.Context, field graphql.CollectedField, obj *comment.Comment) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Comment",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Comment_body(ctx context.Context, field graphql.CollectedField, obj *comment.Comment) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Comment",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Body, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
 
 func (ec *executionContext) _Issue__id(ctx context.Context, field graphql.CollectedField, obj *issue.Issue) (ret graphql.Marshaler) {
 	defer func() {
@@ -667,6 +1073,41 @@ func (ec *executionContext) _Issue_completed(ctx context.Context, field graphql.
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_healthCheck(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().HealthCheck(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*APIHealth)
+	fc.Result = res
+	return ec.marshalNAPIHealth2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐAPIHealth(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_createIssue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -692,7 +1133,7 @@ func (ec *executionContext) _Mutation_createIssue(ctx context.Context, field gra
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateIssue(rctx, args["input"].(issue.NewIssue))
+		return ec.resolvers.Mutation().CreateIssue(rctx, args["input"].(NewIssueInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -749,6 +1190,83 @@ func (ec *executionContext) _Mutation_deleteIssue(ctx context.Context, field gra
 	res := resTmp.(bool)
 	fc.Result = res
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_updateIssue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updateIssue_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateIssue(rctx, args["issueId"].(string), args["issue"].(*UpdateIssueInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_healthCheck(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().HealthCheck(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*APIHealth)
+	fc.Result = res
+	return ec.marshalNAPIHealth2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐAPIHealth(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_issues(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -826,6 +1344,41 @@ func (ec *executionContext) _Query_issue(ctx context.Context, field graphql.Coll
 	res := resTmp.(*issue.Issue)
 	fc.Result = res
 	return ec.marshalNIssue2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐIssue(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_comments(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Comments(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*comment.Comment)
+	fc.Result = res
+	return ec.marshalNComment2ᚕᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋcommentᚐCommentᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1986,8 +2539,8 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputNewIssue(ctx context.Context, obj interface{}) (issue.NewIssue, error) {
-	var it issue.NewIssue
+func (ec *executionContext) unmarshalInputNewIssueInput(ctx context.Context, obj interface{}) (NewIssueInput, error) {
+	var it NewIssueInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -1996,7 +2549,7 @@ func (ec *executionContext) unmarshalInputNewIssue(ctx context.Context, obj inte
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAt"))
-			it.CreatedAt, err = ec.unmarshalOTime2timeᚐTime(ctx, v)
+			it.CreatedAt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2004,7 +2557,7 @@ func (ec *executionContext) unmarshalInputNewIssue(ctx context.Context, obj inte
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAt"))
-			it.UpdatedAt, err = ec.unmarshalOTime2timeᚐTime(ctx, v)
+			it.UpdatedAt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2046,6 +2599,66 @@ func (ec *executionContext) unmarshalInputNewIssue(ctx context.Context, obj inte
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUpdateIssueInput(ctx context.Context, obj interface{}) (UpdateIssueInput, error) {
+	var it UpdateIssueInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "createdAt":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAt"))
+			it.CreatedAt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "updatedAt":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAt"))
+			it.UpdatedAt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "title":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
+			it.Title, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "code":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("code"))
+			it.Code, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "description":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			it.Description, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "completed":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("completed"))
+			it.Completed, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -2053,6 +2666,79 @@ func (ec *executionContext) unmarshalInputNewIssue(ctx context.Context, obj inte
 // endregion ************************** interface.gotpl ***************************
 
 // region    **************************** object.gotpl ****************************
+
+var aPIHealthImplementors = []string{"APIHealth"}
+
+func (ec *executionContext) _APIHealth(ctx context.Context, sel ast.SelectionSet, obj *APIHealth) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, aPIHealthImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("APIHealth")
+		case "Status":
+			out.Values[i] = ec._APIHealth_Status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var commentImplementors = []string{"Comment"}
+
+func (ec *executionContext) _Comment(ctx context.Context, sel ast.SelectionSet, obj *comment.Comment) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, commentImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Comment")
+		case "_id":
+			out.Values[i] = ec._Comment__id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "commentId":
+			out.Values[i] = ec._Comment_commentId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "issueId":
+			out.Values[i] = ec._Comment_issueId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._Comment_createdAt(ctx, field, obj)
+		case "updatedAt":
+			out.Values[i] = ec._Comment_updatedAt(ctx, field, obj)
+		case "body":
+			out.Values[i] = ec._Comment_body(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
 
 var issueImplementors = []string{"Issue"}
 
@@ -2125,6 +2811,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "healthCheck":
+			out.Values[i] = ec._Mutation_healthCheck(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createIssue":
 			out.Values[i] = ec._Mutation_createIssue(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -2132,6 +2823,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "deleteIssue":
 			out.Values[i] = ec._Mutation_deleteIssue(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updateIssue":
+			out.Values[i] = ec._Mutation_updateIssue(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -2161,6 +2857,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "healthCheck":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_healthCheck(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "issues":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -2184,6 +2894,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_issue(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "comments":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_comments(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -2449,6 +3173,20 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) marshalNAPIHealth2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐAPIHealth(ctx context.Context, sel ast.SelectionSet, v APIHealth) graphql.Marshaler {
+	return ec._APIHealth(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAPIHealth2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐAPIHealth(ctx context.Context, sel ast.SelectionSet, v *APIHealth) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._APIHealth(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -2462,6 +3200,53 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNComment2ᚕᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋcommentᚐCommentᚄ(ctx context.Context, sel ast.SelectionSet, v []*comment.Comment) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNComment2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋcommentᚐComment(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalNComment2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋcommentᚐComment(ctx context.Context, sel ast.SelectionSet, v *comment.Comment) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Comment(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
@@ -2530,8 +3315,8 @@ func (ec *executionContext) marshalNIssue2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋin
 	return ec._Issue(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNNewIssue2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐNewIssue(ctx context.Context, v interface{}) (issue.NewIssue, error) {
-	res, err := ec.unmarshalInputNewIssue(ctx, v)
+func (ec *executionContext) unmarshalNNewIssueInput2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐNewIssueInput(ctx context.Context, v interface{}) (NewIssueInput, error) {
+	res, err := ec.unmarshalInputNewIssueInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -2834,6 +3619,29 @@ func (ec *executionContext) unmarshalOTime2timeᚐTime(ctx context.Context, v in
 
 func (ec *executionContext) marshalOTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
 	return graphql.MarshalTime(v)
+}
+
+func (ec *executionContext) unmarshalOTime2ᚖtimeᚐTime(ctx context.Context, v interface{}) (*time.Time, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalTime(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOTime2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return graphql.MarshalTime(*v)
+}
+
+func (ec *executionContext) unmarshalOUpdateIssueInput2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐUpdateIssueInput(ctx context.Context, v interface{}) (*UpdateIssueInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUpdateIssueInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

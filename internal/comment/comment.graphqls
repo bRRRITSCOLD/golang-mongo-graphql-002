@@ -1,0 +1,12 @@
+type Comment {
+  _id: ID!
+  commentId: String!
+  issueId: String!
+  createdAt: Time
+  updatedAt: Time
+  body: String!
+}
+
+extend type Query {
+  comments: [Comment!]!
+}

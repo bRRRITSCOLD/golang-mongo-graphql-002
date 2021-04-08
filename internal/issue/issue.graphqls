@@ -13,12 +13,12 @@ type Issue {
   completed: Boolean!
 }
 
-type Query {
+extend type Query {
   issues: [Issue!]!
   issue(issueId: String!): Issue!
 }
 
-input NewIssue {
+input NewIssueInput {
   createdAt: Time
   updatedAt: Time
   title: String!
@@ -27,9 +27,19 @@ input NewIssue {
   completed: Boolean!
 }
 
-type Mutation {
-  createIssue(input: NewIssue!): Issue!
+input UpdateIssueInput {
+  createdAt: Time
+  updatedAt: Time
+  title: String
+  code: String
+  description: String
+  completed: Boolean
+}
+
+extend type Mutation {
+  createIssue(input: NewIssueInput!): Issue!
   deleteIssue(issueId: String!): Boolean!
+  updateIssue(issueId: String!, issue: UpdateIssueInput): Boolean!
 }
 
 scalar Time
