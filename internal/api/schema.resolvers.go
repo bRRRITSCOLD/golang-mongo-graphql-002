@@ -5,7 +5,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"golang-mongo-graphql-002/internal/api/generated"
 	"golang-mongo-graphql-002/internal/issue"
 	"time"
@@ -33,7 +32,13 @@ func (r *mutationResolver) CreateIssue(ctx context.Context, input issue.NewIssue
 }
 
 func (r *mutationResolver) DeleteIssue(ctx context.Context, issueID string) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+	_, deleteIssuesErr := issue.DeleteIssues(issue.Issue{
+		IssueID: issueID,
+	})
+	if deleteIssuesErr != nil {
+		return false, deleteIssuesErr
+	}
+	return true, nil
 }
 
 func (r *queryResolver) Issues(ctx context.Context) ([]*issue.Issue, error) {

@@ -17,13 +17,16 @@ func CreateIssue(issue Issue) (Issue, error) {
 	if err != nil {
 		return Issue{}, err
 	}
+
 	//Create a handle to the respective collection in the database.
 	collection := client.Database(mongodb.DB).Collection(mongodb.ISSUES)
+
 	//Perform InsertOne operation & validate against the error.
 	insertOneResult, err := collection.InsertOne(context.TODO(), issue)
 	if err != nil {
 		return Issue{}, err
 	}
+
 	//Return success without any error.
 	return Issue{
 		ID:          insertOneResult.InsertedID.(primitive.ObjectID).Hex(),
@@ -39,23 +42,28 @@ func CreateIssue(issue Issue) (Issue, error) {
 //CreateIssues - Insert multiple documents at once in the collection.
 func CreateIssues(issues []Issue) ([]Issue, error) {
 	var newIssues []Issue
+
 	//Map struct slice to interface slice as InsertMany accepts interface slice as parameter
 	insertableIssues := make([]interface{}, len(issues))
 	for i, v := range issues {
 		insertableIssues[i] = v
 	}
+
 	//Get MongoDB connection using connectionhelper.
 	client, err := mongodb.GetMongoClient()
 	if err != nil {
 		return newIssues, err
 	}
+
 	//Create a handle to the respective collection in the database.
 	collection := client.Database(mongodb.DB).Collection(mongodb.ISSUES)
+
 	//Perform InsertMany operation & validate against the error.
 	insertManyResponse, err := collection.InsertMany(context.TODO(), insertableIssues)
 	if err != nil {
 		return newIssues, err
 	}
+
 	// create items to be returned
 	for i := 0; i < len(insertManyResponse.InsertedIDs); i++ {
 		newIssue := issues[i]
@@ -71,6 +79,7 @@ func CreateIssues(issues []Issue) ([]Issue, error) {
 			Completed:   newIssue.Completed,
 		})
 	}
+
 	//Return success without any error.
 	return newIssues, nil
 }
@@ -78,29 +87,37 @@ func CreateIssues(issues []Issue) ([]Issue, error) {
 //FindIssues - Get All issues that match a criteria for collection
 func FindIssues(filter interface{}) ([]Issue, error) {
 	issues := []Issue{}
+
 	//Get MongoDB connection using connectionhelper.
 	client, err := mongodb.GetMongoClient()
 	if err != nil {
 		return issues, err
 	}
+
 	//Create a handle to the respective collection in the database.
 	collection := client.Database(mongodb.DB).Collection(mongodb.ISSUES)
+
 	//Perform Find operation & validate against the error.
 	cur, findError := collection.Find(context.TODO(), filter)
 	if findError != nil {
 		return issues, findError
 	}
+
 	//Map result to slice
 	for cur.Next(context.TODO()) {
 		t := Issue{}
+
 		err := cur.Decode(&t)
 		if err != nil {
 			return issues, err
 		}
+
 		issues = append(issues, t)
 	}
+
 	// once exhausted, close the cursor
 	cur.Close(context.TODO())
+
 	if len(issues) == 0 {
 		return issues, mongo.ErrNoDocuments
 	}
@@ -113,13 +130,16 @@ func DeleteIssues(filter interface{}) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	//Create a handle to the respective collection in the database.
 	collection := client.Database(mongodb.DB).Collection(mongodb.ISSUES)
+
 	//Perform DeleteMany operation & validate against the error.
 	deletedIssues, err := collection.DeleteMany(context.TODO(), filter)
 	if err != nil {
 		return 0, err
 	}
+
 	return deletedIssues.DeletedCount, nil
 }
 
@@ -129,8 +149,10 @@ func UpdateIssues(filter interface{}, issue Issue) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	//Create a handle to the respective collection in the database.
 	collection := client.Database(mongodb.DB).Collection(mongodb.ISSUES)
+
 	//Perform DeleteMany operation & validate against the error.
 	updateManyResponse, err := collection.UpdateMany(context.TODO(), filter, bson.D{
 		bson.E{"$set", issue},
@@ -138,5 +160,6 @@ func UpdateIssues(filter interface{}, issue Issue) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return updateManyResponse.ModifiedCount, nil
 }
