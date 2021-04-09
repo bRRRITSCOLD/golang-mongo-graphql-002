@@ -5,8 +5,6 @@ package api
 
 import (
 	"context"
-	"fmt"
-	"golang-mongo-graphql-002/internal/api/generated"
 	"golang-mongo-graphql-002/internal/issue"
 	"time"
 
@@ -14,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (r *mutationResolver) CreateIssue(ctx context.Context, input generated.NewIssueInput) (*issue.Issue, error) {
+func (r *mutationResolver) CreateIssue(ctx context.Context, input issue.NewIssueInput) (*issue.Issue, error) {
 	createdIssues, createIssuesErr := issue.CreateIssues([]issue.Issue{
 		{
 			IssueID:     uuid.New().String(),
@@ -42,8 +40,22 @@ func (r *mutationResolver) DeleteIssue(ctx context.Context, issueID string) (boo
 	return true, nil
 }
 
-func (r *mutationResolver) UpdateIssue(ctx context.Context, issueID string, issue *generated.UpdateIssueInput) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) UpdateIssue(ctx context.Context, issueID string, input issue.UpdateIssueInput) (bool, error) {
+	_, updateIssuesErr := issue.UpdateIssues(
+		issue.Issue{
+			IssueID: issueID,
+		},
+		issue.Issue{
+			Title:       input.Title,
+			Code:        input.Code,
+			Description: input.Description,
+			Completed:   input.Completed,
+		},
+	)
+	if updateIssuesErr != nil {
+		return false, updateIssuesErr
+	}
+	return true, nil
 }
 
 func (r *queryResolver) Issues(ctx context.Context) ([]*issue.Issue, error) {

@@ -28,8 +28,6 @@ input NewIssueInput {
 }
 
 input UpdateIssueInput {
-  createdAt: Time
-  updatedAt: Time
   title: String
   code: String
   description: String
@@ -39,7 +37,7 @@ input UpdateIssueInput {
 extend type Mutation {
   createIssue(input: NewIssueInput!): Issue!
   deleteIssue(issueId: String!): Boolean!
-  updateIssue(issueId: String!, issue: UpdateIssueInput): Boolean!
+  updateIssue(issueId: String!, input: UpdateIssueInput!): Boolean!
 }
 
 scalar Time

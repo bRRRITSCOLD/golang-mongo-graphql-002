@@ -70,10 +70,10 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateIssue func(childComplexity int, input NewIssueInput) int
+		CreateIssue func(childComplexity int, input issue.NewIssueInput) int
 		DeleteIssue func(childComplexity int, issueID string) int
 		HealthCheck func(childComplexity int) int
-		UpdateIssue func(childComplexity int, issueID string, issue *UpdateIssueInput) int
+		UpdateIssue func(childComplexity int, issueID string, input issue.UpdateIssueInput) int
 	}
 
 	Query struct {
@@ -86,9 +86,9 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	HealthCheck(ctx context.Context) (*APIHealth, error)
-	CreateIssue(ctx context.Context, input NewIssueInput) (*issue.Issue, error)
+	CreateIssue(ctx context.Context, input issue.NewIssueInput) (*issue.Issue, error)
 	DeleteIssue(ctx context.Context, issueID string) (bool, error)
-	UpdateIssue(ctx context.Context, issueID string, issue *UpdateIssueInput) (bool, error)
+	UpdateIssue(ctx context.Context, issueID string, input issue.UpdateIssueInput) (bool, error)
 }
 type QueryResolver interface {
 	HealthCheck(ctx context.Context) (*APIHealth, error)
@@ -227,7 +227,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateIssue(childComplexity, args["input"].(NewIssueInput)), true
+		return e.complexity.Mutation.CreateIssue(childComplexity, args["input"].(issue.NewIssueInput)), true
 
 	case "Mutation.deleteIssue":
 		if e.complexity.Mutation.DeleteIssue == nil {
@@ -258,7 +258,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateIssue(childComplexity, args["issueId"].(string), args["issue"].(*UpdateIssueInput)), true
+		return e.complexity.Mutation.UpdateIssue(childComplexity, args["issueId"].(string), args["input"].(issue.UpdateIssueInput)), true
 
 	case "Query.comments":
 		if e.complexity.Query.Comments == nil {
@@ -403,8 +403,6 @@ input NewIssueInput {
 }
 
 input UpdateIssueInput {
-  createdAt: Time
-  updatedAt: Time
   title: String
   code: String
   description: String
@@ -414,7 +412,7 @@ input UpdateIssueInput {
 extend type Mutation {
   createIssue(input: NewIssueInput!): Issue!
   deleteIssue(issueId: String!): Boolean!
-  updateIssue(issueId: String!, issue: UpdateIssueInput): Boolean!
+  updateIssue(issueId: String!, input: UpdateIssueInput!): Boolean!
 }
 
 scalar Time`, BuiltIn: false},
@@ -441,10 +439,10 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_createIssue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 NewIssueInput
+	var arg0 issue.NewIssueInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewIssueInput2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐNewIssueInput(ctx, tmp)
+		arg0, err = ec.unmarshalNNewIssueInput2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐNewIssueInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -480,15 +478,15 @@ func (ec *executionContext) field_Mutation_updateIssue_args(ctx context.Context,
 		}
 	}
 	args["issueId"] = arg0
-	var arg1 *UpdateIssueInput
-	if tmp, ok := rawArgs["issue"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issue"))
-		arg1, err = ec.unmarshalOUpdateIssueInput2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐUpdateIssueInput(ctx, tmp)
+	var arg1 issue.UpdateIssueInput
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg1, err = ec.unmarshalNUpdateIssueInput2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐUpdateIssueInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["issue"] = arg1
+	args["input"] = arg1
 	return args, nil
 }
 
@@ -1133,7 +1131,7 @@ func (ec *executionContext) _Mutation_createIssue(ctx context.Context, field gra
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateIssue(rctx, args["input"].(NewIssueInput))
+		return ec.resolvers.Mutation().CreateIssue(rctx, args["input"].(issue.NewIssueInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1217,7 +1215,7 @@ func (ec *executionContext) _Mutation_updateIssue(ctx context.Context, field gra
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateIssue(rctx, args["issueId"].(string), args["issue"].(*UpdateIssueInput))
+		return ec.resolvers.Mutation().UpdateIssue(rctx, args["issueId"].(string), args["input"].(issue.UpdateIssueInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2539,8 +2537,8 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputNewIssueInput(ctx context.Context, obj interface{}) (NewIssueInput, error) {
-	var it NewIssueInput
+func (ec *executionContext) unmarshalInputNewIssueInput(ctx context.Context, obj interface{}) (issue.NewIssueInput, error) {
+	var it issue.NewIssueInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -2549,7 +2547,7 @@ func (ec *executionContext) unmarshalInputNewIssueInput(ctx context.Context, obj
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAt"))
-			it.CreatedAt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			it.CreatedAt, err = ec.unmarshalOTime2timeᚐTime(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2557,7 +2555,7 @@ func (ec *executionContext) unmarshalInputNewIssueInput(ctx context.Context, obj
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAt"))
-			it.UpdatedAt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			it.UpdatedAt, err = ec.unmarshalOTime2timeᚐTime(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2599,33 +2597,17 @@ func (ec *executionContext) unmarshalInputNewIssueInput(ctx context.Context, obj
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputUpdateIssueInput(ctx context.Context, obj interface{}) (UpdateIssueInput, error) {
-	var it UpdateIssueInput
+func (ec *executionContext) unmarshalInputUpdateIssueInput(ctx context.Context, obj interface{}) (issue.UpdateIssueInput, error) {
+	var it issue.UpdateIssueInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
 		switch k {
-		case "createdAt":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAt"))
-			it.CreatedAt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "updatedAt":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAt"))
-			it.UpdatedAt, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
 		case "title":
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
-			it.Title, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Title, err = ec.unmarshalOString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2633,7 +2615,7 @@ func (ec *executionContext) unmarshalInputUpdateIssueInput(ctx context.Context, 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("code"))
-			it.Code, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Code, err = ec.unmarshalOString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2641,7 +2623,7 @@ func (ec *executionContext) unmarshalInputUpdateIssueInput(ctx context.Context, 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
-			it.Description, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.Description, err = ec.unmarshalOString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2649,7 +2631,7 @@ func (ec *executionContext) unmarshalInputUpdateIssueInput(ctx context.Context, 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("completed"))
-			it.Completed, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			it.Completed, err = ec.unmarshalOBoolean2bool(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -3315,7 +3297,7 @@ func (ec *executionContext) marshalNIssue2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋin
 	return ec._Issue(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNNewIssueInput2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐNewIssueInput(ctx context.Context, v interface{}) (NewIssueInput, error) {
+func (ec *executionContext) unmarshalNNewIssueInput2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐNewIssueInput(ctx context.Context, v interface{}) (issue.NewIssueInput, error) {
 	res, err := ec.unmarshalInputNewIssueInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
@@ -3333,6 +3315,11 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNUpdateIssueInput2golangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋissueᚐUpdateIssueInput(ctx context.Context, v interface{}) (issue.UpdateIssueInput, error) {
+	res, err := ec.unmarshalInputUpdateIssueInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -3619,29 +3606,6 @@ func (ec *executionContext) unmarshalOTime2timeᚐTime(ctx context.Context, v in
 
 func (ec *executionContext) marshalOTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
 	return graphql.MarshalTime(v)
-}
-
-func (ec *executionContext) unmarshalOTime2ᚖtimeᚐTime(ctx context.Context, v interface{}) (*time.Time, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalTime(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOTime2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return graphql.MarshalTime(*v)
-}
-
-func (ec *executionContext) unmarshalOUpdateIssueInput2ᚖgolangᚑmongoᚑgraphqlᚑ002ᚋinternalᚋapiᚋgeneratedᚐUpdateIssueInput(ctx context.Context, v interface{}) (*UpdateIssueInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputUpdateIssueInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

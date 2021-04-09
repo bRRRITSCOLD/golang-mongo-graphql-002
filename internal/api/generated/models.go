@@ -2,28 +2,6 @@
 
 package generated
 
-import (
-	"time"
-)
-
 type APIHealth struct {
 	Status string `json:"Status"`
-}
-
-type NewIssueInput struct {
-	CreatedAt   *time.Time `json:"createdAt"`
-	UpdatedAt   *time.Time `json:"updatedAt"`
-	Title       string     `json:"title"`
-	Code        string     `json:"code"`
-	Description string     `json:"description"`
-	Completed   bool       `json:"completed"`
-}
-
-type UpdateIssueInput struct {
-	CreatedAt   *time.Time `json:"createdAt"`
-	UpdatedAt   *time.Time `json:"updatedAt"`
-	Title       *string    `json:"title"`
-	Code        *string    `json:"code"`
-	Description *string    `json:"description"`
-	Completed   *bool      `json:"completed"`
 }
