@@ -1,7 +1,7 @@
 package issue
 
-func PointerIssue(intrface Issue) *Issue {
-	i := intrface
+func PointerIssue(iss Issue) *Issue {
+	i := iss
 	return &i
 }
 

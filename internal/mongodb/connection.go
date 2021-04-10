@@ -23,6 +23,7 @@ const (
 	CONNECTIONSTRING = "mongodb://localhost:27017"
 	DB               = "localDb"
 	ISSUES           = "issues"
+	COMMENTS         = "comments"
 )
 
 //GetMongoClient - Return mongodb connection to work with

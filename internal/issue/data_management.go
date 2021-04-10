@@ -12,25 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-//CreateIssue - Insert a new document in the collection.
-func CreateIssue(issue Issue) (Issue, error) {
-	// call existing create issues func
-	createdIssues, createIssuesErr := CreateIssues([]Issue{
-		{
-			Title:       issue.Title,
-			Code:        issue.Code,
-			Description: issue.Description,
-			Completed:   issue.Completed,
-		},
-	})
-	if createIssuesErr != nil {
-		return Issue{}, createIssuesErr
-	}
-
-	//Return success without any error.
-	return createdIssues[0], nil
-}
-
 //CreateIssues - Insert multiple documents at once in the collection.
 func CreateIssues(issues []Issue) ([]Issue, error) {
 	//Map struct slice to interface slice as InsertMany accepts interface slice as parameter
@@ -77,6 +58,20 @@ func CreateIssues(issues []Issue) ([]Issue, error) {
 
 	//Return success without any error.
 	return returnableIssues, nil
+}
+
+//CreateIssue - Insert a new document in the collection.
+func CreateIssue(iss Issue) (Issue, error) {
+	// call existing create issues func
+	createdIssues, createIssuesErr := CreateIssues([]Issue{
+		iss,
+	})
+	if createIssuesErr != nil {
+		return Issue{}, createIssuesErr
+	}
+
+	//Return success without any error.
+	return createdIssues[0], nil
 }
 
 //FindIssues - Get All issues that match a criteria for collection
@@ -138,7 +133,7 @@ func DeleteIssues(filter interface{}) (int64, error) {
 	return deletedIssues.DeletedCount, nil
 }
 
-func UpdateIssues(filter interface{}, issue Issue) (int64, error) {
+func UpdateIssues(filter interface{}, update Issue) (int64, error) {
 	//Get MongoDB connection using connectionhelper.
 	client, err := mongodb.GetMongoClient()
 	if err != nil {
@@ -146,7 +141,7 @@ func UpdateIssues(filter interface{}, issue Issue) (int64, error) {
 	}
 
 	// create update
-	issueUpdate := MapToIssue(issue)
+	issueUpdate := MapToIssue(update)
 	issueUpdate.UpdatedAt = time.Now()
 
 	//Create a handle to the respective collection in the database.

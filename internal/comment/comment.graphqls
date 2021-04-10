@@ -9,4 +9,21 @@ type Comment {
 
 extend type Query {
   comments: [Comment!]!
+  comment(commentId: String!): Comment!
+}
+
+input NewCommentInput {
+  issueId: String!
+  body: String!
+}
+
+input UpdateCommentInput {
+  issueId: String
+  body: String
+}
+
+extend type Mutation {
+  createComment(input: NewCommentInput!): Comment!
+  deleteComment(commentId: String!): Boolean!
+  updateComment(commentId: String!, input: UpdateCommentInput!): Boolean!
 }

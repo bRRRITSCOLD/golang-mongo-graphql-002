@@ -13,3 +13,13 @@ type Comment struct {
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt,omitempty"`
 	Body      string    `json:"body" bson:"body,omitempty"`
 }
+
+type NewCommentInput struct {
+	IssueID string `json:"issueId" bson:"issueId,omitempty"`
+	Body    string `json:"body" bson:"body,omitempty"`
+}
+
+type UpdateCommentInput struct {
+	IssueID string `json:"issueId" bson:"issueId,omitempty"`
+	Body    string `json:"body" bson:"body,omitempty"`
+}
