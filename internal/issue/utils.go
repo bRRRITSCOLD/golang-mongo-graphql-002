@@ -12,3 +12,16 @@ func PointerIssues(issues []Issue) []*Issue {
 	}
 	return pointerIssues
 }
+
+func MapToIssue(issue Issue) Issue {
+	return Issue{
+		ID:          issue.ID,
+		IssueID:     issue.IssueID,
+		CreatedAt:   issue.CreatedAt,
+		UpdatedAt:   issue.UpdatedAt,
+		Title:       issue.Title,
+		Code:        issue.Code,
+		Description: issue.Description,
+		Completed:   issue.Completed,
+	}
+}

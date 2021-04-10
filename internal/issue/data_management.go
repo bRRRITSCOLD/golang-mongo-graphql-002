@@ -34,31 +34,21 @@ func CreateIssue(issue Issue) (Issue, error) {
 //CreateIssues - Insert multiple documents at once in the collection.
 func CreateIssues(issues []Issue) ([]Issue, error) {
 	//Map struct slice to interface slice as InsertMany accepts interface slice as parameter
-	newIssues := make([]Issue, len(issues))
-	for i, v := range issues {
-		newIssues[i] = Issue{
-			IssueID:     uuid.New().String(),
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-			Title:       v.Title,
-			Code:        v.Code,
-			Description: v.Description,
-			Completed:   v.Completed,
-		}
+	var newIssues []Issue
+	for _, v := range issues {
+		newIssue := MapToIssue(v)
+		timeNow := time.Now()
+		newIssue.IssueID = uuid.New().String()
+		newIssue.CreatedAt = timeNow
+		newIssue.UpdatedAt = timeNow
+		newIssues = append(newIssues, newIssue)
 	}
 
 	//Map struct slice to interface slice as InsertMany accepts interface slice as parameter
-	insertableIssues := make([]interface{}, len(newIssues))
-	for i, v := range newIssues {
-		insertableIssues[i] = Issue{
-			IssueID:     v.IssueID,
-			CreatedAt:   v.CreatedAt,
-			UpdatedAt:   v.UpdatedAt,
-			Title:       v.Title,
-			Code:        v.Code,
-			Description: v.Description,
-			Completed:   v.Completed,
-		}
+	var insertableIssues []interface{}
+	// insertableIssues := make([]interface{}, len(newIssues))
+	for _, v := range newIssues {
+		insertableIssues = append(insertableIssues, v)
 	}
 
 	//Get MongoDB connection using connectionhelper.
@@ -79,18 +69,10 @@ func CreateIssues(issues []Issue) ([]Issue, error) {
 	// create items to be returned
 	var returnableIssues []Issue
 	for i := 0; i < len(insertManyResponse.InsertedIDs); i++ {
-		newIssue := newIssues[i]
+		newIssue := MapToIssue(newIssues[i])
 		newIssueID := insertManyResponse.InsertedIDs[i]
-		returnableIssues = append(returnableIssues, Issue{
-			ID:          newIssueID.(primitive.ObjectID).Hex(),
-			IssueID:     newIssue.IssueID,
-			CreatedAt:   newIssue.CreatedAt,
-			UpdatedAt:   newIssue.UpdatedAt,
-			Title:       newIssue.Title,
-			Code:        newIssue.Code,
-			Description: newIssue.Description,
-			Completed:   newIssue.Completed,
-		})
+		newIssue.ID = newIssueID.(primitive.ObjectID).Hex()
+		returnableIssues = append(returnableIssues, newIssue)
 	}
 
 	//Return success without any error.
@@ -164,13 +146,8 @@ func UpdateIssues(filter interface{}, issue Issue) (int64, error) {
 	}
 
 	// create update
-	issueUpdate := Issue{
-		UpdatedAt:   time.Now(),
-		Title:       issue.Title,
-		Code:        issue.Code,
-		Description: issue.Description,
-		Completed:   issue.Completed,
-	}
+	issueUpdate := MapToIssue(issue)
+	issueUpdate.UpdatedAt = time.Now()
 
 	//Create a handle to the respective collection in the database.
 	collection := client.Database(mongodb.DB).Collection(mongodb.ISSUES)
