@@ -2,9 +2,11 @@ package issue
 
 import (
 	"context"
+	"time"
 
 	"golang-mongo-graphql-002/internal/mongodb"
 
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,41 +14,51 @@ import (
 
 //CreateIssue - Insert a new document in the collection.
 func CreateIssue(issue Issue) (Issue, error) {
-	//Get MongoDB connection using connectionhelper.
-	client, err := mongodb.GetMongoClient()
-	if err != nil {
-		return Issue{}, err
-	}
-
-	//Create a handle to the respective collection in the database.
-	collection := client.Database(mongodb.DB).Collection(mongodb.ISSUES)
-
-	//Perform InsertOne operation & validate against the error.
-	insertOneResult, err := collection.InsertOne(context.TODO(), issue)
-	if err != nil {
-		return Issue{}, err
+	// call existing create issues func
+	createdIssues, createIssuesErr := CreateIssues([]Issue{
+		{
+			Title:       issue.Title,
+			Code:        issue.Code,
+			Description: issue.Description,
+			Completed:   issue.Completed,
+		},
+	})
+	if createIssuesErr != nil {
+		return Issue{}, createIssuesErr
 	}
 
 	//Return success without any error.
-	return Issue{
-		ID:          insertOneResult.InsertedID.(primitive.ObjectID).Hex(),
-		CreatedAt:   issue.CreatedAt,
-		UpdatedAt:   issue.UpdatedAt,
-		Title:       issue.Title,
-		Code:        issue.Code,
-		Description: issue.Description,
-		Completed:   issue.Completed,
-	}, nil
+	return createdIssues[0], nil
 }
 
 //CreateIssues - Insert multiple documents at once in the collection.
 func CreateIssues(issues []Issue) ([]Issue, error) {
-	var newIssues []Issue
+	//Map struct slice to interface slice as InsertMany accepts interface slice as parameter
+	newIssues := make([]Issue, len(issues))
+	for i, v := range issues {
+		newIssues[i] = Issue{
+			IssueID:     uuid.New().String(),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Title:       v.Title,
+			Code:        v.Code,
+			Description: v.Description,
+			Completed:   v.Completed,
+		}
+	}
 
 	//Map struct slice to interface slice as InsertMany accepts interface slice as parameter
-	insertableIssues := make([]interface{}, len(issues))
-	for i, v := range issues {
-		insertableIssues[i] = v
+	insertableIssues := make([]interface{}, len(newIssues))
+	for i, v := range newIssues {
+		insertableIssues[i] = Issue{
+			IssueID:     v.IssueID,
+			CreatedAt:   v.CreatedAt,
+			UpdatedAt:   v.UpdatedAt,
+			Title:       v.Title,
+			Code:        v.Code,
+			Description: v.Description,
+			Completed:   v.Completed,
+		}
 	}
 
 	//Get MongoDB connection using connectionhelper.
@@ -65,10 +77,11 @@ func CreateIssues(issues []Issue) ([]Issue, error) {
 	}
 
 	// create items to be returned
+	var returnableIssues []Issue
 	for i := 0; i < len(insertManyResponse.InsertedIDs); i++ {
-		newIssue := issues[i]
+		newIssue := newIssues[i]
 		newIssueID := insertManyResponse.InsertedIDs[i]
-		newIssues = append(newIssues, Issue{
+		returnableIssues = append(returnableIssues, Issue{
 			ID:          newIssueID.(primitive.ObjectID).Hex(),
 			IssueID:     newIssue.IssueID,
 			CreatedAt:   newIssue.CreatedAt,
@@ -81,7 +94,7 @@ func CreateIssues(issues []Issue) ([]Issue, error) {
 	}
 
 	//Return success without any error.
-	return newIssues, nil
+	return returnableIssues, nil
 }
 
 //FindIssues - Get All issues that match a criteria for collection
@@ -150,12 +163,21 @@ func UpdateIssues(filter interface{}, issue Issue) (int64, error) {
 		return 0, err
 	}
 
+	// create update
+	issueUpdate := Issue{
+		UpdatedAt:   time.Now(),
+		Title:       issue.Title,
+		Code:        issue.Code,
+		Description: issue.Description,
+		Completed:   issue.Completed,
+	}
+
 	//Create a handle to the respective collection in the database.
 	collection := client.Database(mongodb.DB).Collection(mongodb.ISSUES)
 
 	//Perform DeleteMany operation & validate against the error.
 	updateManyResponse, err := collection.UpdateMany(context.TODO(), filter, bson.D{
-		bson.E{"$set", issue},
+		bson.E{"$set", issueUpdate},
 	})
 	if err != nil {
 		return 0, err

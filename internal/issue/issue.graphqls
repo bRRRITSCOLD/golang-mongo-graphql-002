@@ -19,8 +19,6 @@ extend type Query {
 }
 
 input NewIssueInput {
-  createdAt: Time
-  updatedAt: Time
   title: String!
   code: String!
   description: String!

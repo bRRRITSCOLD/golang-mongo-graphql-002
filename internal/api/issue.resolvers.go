@@ -6,18 +6,13 @@ package api
 import (
 	"context"
 	"golang-mongo-graphql-002/internal/issue"
-	"time"
 
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (r *mutationResolver) CreateIssue(ctx context.Context, input issue.NewIssueInput) (*issue.Issue, error) {
 	createdIssues, createIssuesErr := issue.CreateIssues([]issue.Issue{
 		{
-			IssueID:     uuid.New().String(),
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
 			Title:       input.Title,
 			Code:        input.Code,
 			Description: input.Description,
